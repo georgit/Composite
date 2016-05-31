@@ -25,22 +25,26 @@
 long long doit(td_t t, int size)
 {
 	cbuf_t cb;
-	long long time1, time2;
+	long long time1, time2, diff;
 	int ret = 0;
-	char *s = cbuf_alloc(size, &cb); //null terminator?
+	char *s = cbuf_alloc(size, &cb);
 
+	if (!s) { 
+		printc("UNIT TEST FAILED: cbut alloc failed %s\n", s); 
+		return -1; 
+	}
 	memset(s, 'a', size - 2);
 	s[size - 1] = '\0';
 
-	if (!s) { printc("UNIT TEST FAILED: cbut alloc failed %s\n", s); return -1; }
-
-	/* take clock ticks */
 	rdtscll(time1);
 	ret = twritep(cos_spd_id(), t, cb, 0, size);
-	/* take clock ticks after */
+	if (!ret) { 
+		printc("UNIT TEST FAILED: cbut alloc failed %s\n", s); 
+		return -1; 
+	}
 	rdtscll(time2);
 
-	long long diff = time2 - time1;	
+	diff = time2 - time1;	
 
 #if DEBUG
 	printc("t1: %lld t2: %lld diff: %lld\n", time1, time2, diff);
@@ -57,9 +61,11 @@ void test_write(void)
 	char *params1 = "bar";
 	int chunk_size;
 	
-	/* open file */
 	t = tsplit(cos_spd_id(), td_root, params1, strlen(params1), TOR_ALL, evt1);
-	if (t < 1) { printc("UNIT TEST FAILED: split failed %c\n", t); return; }
+	if (t < 1) { 
+		printc("UNIT TEST FAILED: split failed %c\n", t); 
+		return; 
+	}
 
 	for (chunk_size = 64; chunk_size <= 16384; chunk_size *= 2) {
 		unsigned int iterations = 5;
@@ -73,7 +79,6 @@ void test_write(void)
 		printc("avr clock ticks for chunk size %d: %lld\n", chunk_size, average);
 	}
 
-	/* close file */
 	trelease(cos_spd_id(), t);
 
 	call();
@@ -133,10 +138,6 @@ void twritep_readp_tests(void)
 	// Close the file so we can read from it
 	trelease(cos_spd_id(), t1);
 
-
-
-
-
 	/* End of writing stage */
 	/* Going to test reading next */
 
@@ -167,31 +168,20 @@ void twritep_readp_tests(void)
 	}
 	
 	for (i = 0; i < 100; i++) {
-		
-		
 		rdtscll(t);
 		rnd = (int) (t & 127);
 		int rnd_val;
+		int offset;
 		
 		if (rnd > 0 && rnd < 42) {
 			rnd_val = 0;
-		}
-		else if (rnd >= 42 && rnd < 84) {
+			offset = 0;
+		} else if (rnd >= 42 && rnd < 84) {
 			rnd_val = 1;
-		}
-		else
-		{
+			offset = 50;
+		} else {
 			rnd_val = 2;
-		}
-
-		int offset;
-		switch (rnd_val) {
-			case 0:
-				offset = 0;
-			case 1:
-				offset = 50;
-			case 2: 
-				offset = str_length;
+			offset = str_length;
 		}
 
 		// pick a random length
@@ -214,9 +204,6 @@ void twritep_readp_tests(void)
 	}
 	
 	trelease(cos_spd_id(), t3);
-
-
-
 
 	return;
 }

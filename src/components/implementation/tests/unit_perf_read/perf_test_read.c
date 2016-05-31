@@ -77,34 +77,28 @@ bread(void* buf, long nbytes)
 long long doit(td_t t)
 {
 	long long time1, time2;
+	long long diff;
 	int off, sz;
 	int ret = 0;
 	size_t size, chunk;
 	char *buf;
 
-	size = count; // need count
-	chunk = xfersize; // this too
+	size = count;
+	chunk = xfersize;
 
-	/* take clock ticks */
 	rdtscll(time1);
-
 	while (size > 0) {
 		if (size < chunk) chunk = size;
 		printc("Calling read\n");
 		ret = treadp(cos_spd_id(), t, &off, &sz);
-
 		if (!ret) break;
-
 		buf = cbuf2buf(ret, sz);
-
 		bread(buf, MIN(size, xfersize));
 		size -= chunk;
 	}
-
-	/* take clock ticks after */
 	rdtscll(time2);
 
-	long long diff = time2 - time1;
+	diff = time2 - time1;
 	
 #if DEBUG
 	printc("read: [%s]\n", buf);	
@@ -123,26 +117,23 @@ void call(void)
 	char *params1 = "bar";
 	int i;
 	
-	/* open file */
 	t = tsplit(cos_spd_id(), td_root, params1, strlen(params1), TOR_ALL, evt1);
-	if (t < 1) { printc("UNIT TEST FAILED: split failed %c\n", t); return; }
+	if (t < 1) { 
+		printc("UNIT TEST FAILED: split failed %c\n", t); 
+		return; 
+	}
 
 	for (i = 0; i <= 10; i++) {
-		unsigned int iterations = 5;
+		unsigned int iterations;
 		unsigned int max = iterations;
 		long long total = 0;
 
-		while (0 < iterations--) {
+		for (iterations = 5; iterations > 0; iterations--) {
 			total += doit(t);
 		}
 		long long average = (long long) ((long double) total / (long double) max);
 		printc("avr clock ticks for iteration %d: %lld\n", i, average);
 	}
 
-	/* close file */
 	trelease(cos_spd_id(), t);
-}
-
-void cos_init(void)
-{
 }

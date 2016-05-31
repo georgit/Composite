@@ -202,24 +202,17 @@ treadp(spdid_t spdid, td_t td, int *off, int *sz)
 	/* find where we are reading from */
 	while (total_offset < t->offset && current != NULL) {
 		total_offset += current->len;
-
 		prev = current;
 		current = current->next;
 	}
 
-	/* Probably want to bomb out smarter but... for now */
 	if (!current) ERR_THROW(-EINVAL, done); 
 
-	/* current should now be equal to the file offset. */
 	*off = current->start;
 	*sz  = current->len;
 	ret  = current->cbuf_id;
-
 	t->offset += current->len;
-
 	cbuf_send(current->cbuf_id);
-
-	char* buf = cbuf2buf(current->cbuf_id, current->len);
 
 done:	
 	UNLOCK();
@@ -284,10 +277,14 @@ twritep(spdid_t spdid, td_t td, int cb, int start, int sz)
 	int ret = -1, left;
 	struct torrent *t;
 	struct fsobj *fso;
+	struct file_data *current;
+	unsigned int total_offset = 0;
+	unsigned int curr_off = 0;
+	struct file_data *prev = NULL;
+	struct file_data *new_node;
 
-	if (!sz) {return -EINVAL;}
-
-	if (tor_isnull(td)) {return -EINVAL;}
+	if (!sz) { return -EINVAL; }
+	if (tor_isnull(td)) { return -EINVAL; }
 
 	LOCK();
 
@@ -302,26 +299,17 @@ twritep(spdid_t spdid, td_t td, int cb, int start, int sz)
 	//assert(fso->size <= fso->allocated);
 	//assert(t->offset <= fso->size);
 
-	unsigned int total_offset = 0;
-	struct file_data *current = (struct file_data*) fso->data;
+	current = (struct file_data*) fso->data;
 	
 	/* file does not exist yet */
 	if (current == NULL) {
-		struct file_data *new_node;
 		file_data_alloc(&new_node, cb, 0, sz, start, sz, NULL);
-
 		fso->data = new_node;
-
 		t->offset += sz;
 		fso->size = t->offset;
-
 		ret = sz;
-
 		goto done;
 	}
-	
-	unsigned int curr_off = 0;
-	struct file_data *prev = NULL;
 
 	/* iterate through and try to find where to write to */
 	while (current != NULL &&
@@ -337,11 +325,8 @@ twritep(spdid_t spdid, td_t td, int cb, int start, int sz)
 	if (current == NULL) {
 		// arguably the most likely case
 		// just writing to the end of the file
-		struct file_data *new_node;
 		file_data_alloc(&new_node, cb, 0, sz, start, sz, NULL);
-
 		prev->next = new_node;
-
 		t->offset += sz;
 		fso->size = t->offset;
 	}
@@ -370,8 +355,7 @@ twritep(spdid_t spdid, td_t td, int cb, int start, int sz)
 	else if (sz > current->len) {
 		struct file_data* ptr_node = current->next;
 		struct file_data* head_node = current;
-		if (curr_off == 0)
-		{
+		if (curr_off == 0) {
 			ptr_node = current;
 			head_node = prev;
 		}
@@ -379,8 +363,7 @@ twritep(spdid_t spdid, td_t td, int cb, int start, int sz)
 		int bytesOverwritten = current->len - curr_off;
 		current->len -= bytesOverwritten;
 
-		while (ptr_node != NULL && bytesOverwritten + ptr_node->len
-			< sz) {
+		while (ptr_node != NULL && bytesOverwritten + ptr_node->len < sz) {
 			bytesOverwritten += ptr_node->len;
 			struct file_data *temp_ptr = ptr_node;
 			ptr_node = ptr_node->next;
@@ -408,10 +391,9 @@ twritep(spdid_t spdid, td_t td, int cb, int start, int sz)
 done:
 
 #if DEBUG	
-	// print current state
-	current = (struct file_data*) fso->data; // start of file
-	while (current != NULL)
-	{
+	/* print current state */
+	current = (struct file_data*) fso->data; /* start of file */
+	while (current != NULL) {
 		char *full_buf = cbuf2buf(current->cbuf_id, current->cbuf_len);
 		char *buf = malloc(sizeof(char) * current->len);
 		memcpy(buf, full_buf + current->start, current->len);

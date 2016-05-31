@@ -323,12 +323,6 @@ trelease(spdid_t spdid, td_t td)
 		}
 		/* no torrents are accessing the as connection...free it */
 		if (!other) {
-			/*struct cringbuf *rb;
-
-			  rb = &ac->rbs[0];
-			  free(rb->b);
-			  rb = &ac->rbs[1];
-			  free(rb->b);*/
 			free(ac->cbs[0].ring);
 			free(ac->cbs[1].ring);
 			free(ac);
@@ -370,7 +364,6 @@ done:
 	return ret;
 }
 
-// What are these definitions?
 int 
 twritep(spdid_t spdid, td_t td, int cbid, int size, int sz)
 {
