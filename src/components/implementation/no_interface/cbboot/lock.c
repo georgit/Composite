@@ -174,7 +174,7 @@ static int lock_is_thd_blocked(struct meta_lock *ml, unsigned short int thd)
 	return 0;
 }
 
-static inline void __lock_help(struct meta_lock *l, int smp)							// what is smp? Why is it always zero???
+static inline void __lock_help(struct meta_lock *l, int smp)
 {
 	union cos_lock_atomic_struct result, prev_val;
 	u16_t owner;
@@ -183,8 +183,8 @@ static inline void __lock_help(struct meta_lock *l, int smp)							// what is sm
 	do {
 		prev_val.v         = l->lock_addr->v;
 		owner              = prev_val.c.owner;
-		assert(owner); /* from lock_help_owner, this must be true */
-		result.c.owner     = owner;
+		if (!owner) continue;
+		result.c.owner = owner;
 		result.c.contested = 1;
 	} while (unlikely(!__cos_cas((unsigned long *)&l->lock_addr->v, prev_val.v, result.v, smp)));
 

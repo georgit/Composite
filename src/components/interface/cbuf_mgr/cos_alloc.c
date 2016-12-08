@@ -250,13 +250,11 @@ static void _alloc_libc_free(void *ptr)
 		__alloc_t *pointer = BLOCK_START(ptr);
 		size_t size = pointer->size;
 
-		if (size && size <= __MAX_SMALL_SIZE) {
+		assert(size);
+		if (size <= __MAX_SMALL_SIZE) {
 			__small_free(ptr, size);
-		} else if (size) {
+		} else {
 			cbuf_free(pointer->cbuf_id);
-		}
-		else {
-			// bug because size is invalid???		
 		}
 	}
 }
